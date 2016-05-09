@@ -17,6 +17,8 @@ typedef struct Node_T {
 typedef struct Point_T {
   Node_T* a;
   Node_T* b;
+  /* maintain a pointer to the root node as an aux for operations */
+  Node_T* root;
   int string_len;
 } Point_T;
 

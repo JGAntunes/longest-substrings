@@ -28,6 +28,7 @@ void init_suffix_tree(Node_T** root, Point_T** point) {
   (*root)->suffix_link = (*root);
   /* init point */
   (*point)->a = *root;
+  (*point)->root = *root;
   (*point)->b = NULL;
   (*point)->string_len = 0;
   return;
@@ -48,15 +49,20 @@ Node_T* new_node(int line_num, int start, int* end) {
 Node_T* new_internal_node(int line_num, Point_T* point) {
   int* split = (int*) malloc (sizeof(int));
   *split = point->b->path_start + point->string_len - 1;
-  return new_node(line_num, point->b->path_start, split);
+  Node_T* internal_node = new_node(line_num, point->b->path_start, split);
+  /* internal nodes default suffix links to root */
+  internal_node->suffix_link = point->root;
+  return internal_node;
 }
 
 void set_child(Node_T* parent_node, Node_T* new_node) {
   Node_T* current_node = parent_node->child;
   Node_T* temp_node = parent_node;
+  /* node doesn't have any child */
   if (!current_node) {
     temp_node->child = new_node;
     new_node->hook = &(temp_node->child);
+    return;
   }
   while (current_node) {
     temp_node = current_node;
@@ -69,13 +75,14 @@ void set_child(Node_T* parent_node, Node_T* new_node) {
 void set_internal_node(Point_T* point, Node_T* internal_node, Node_T* leaf_node) {
   /* maintain link between brothers if any */
   *(point->b->hook) = point->b->brother;
+  point->b->brother = NULL;
+  /* update start path for existing node*/
+  point->b->path_start += point->string_len;
   /* add new active node child */
   set_child(point->a, internal_node);
   /* add new internal node childs */
   set_child(internal_node, point->b);
   set_child(internal_node, leaf_node);
-  /* update start path for existing node*/
-  point->b->path_start += point->string_len;
 }
 
 void set_active_edge(Point_T* point, char new_char, char** text) {
@@ -94,7 +101,7 @@ void set_active_edge(Point_T* point, char new_char, char** text) {
 
 void set_point(Point_T* point, char next_char, char** text) {
   /* node is root if ain't got no hook*/
-  if (!point->a->hook) {
+  if (!point->a->hook && point->string_len > 0) {
     /* decrement active length */
     point->string_len--;
     set_active_edge(point, next_char, text);
@@ -147,6 +154,7 @@ void insert_char(Point_T* point, int line_num, int* char_pos, char** text) {
       set_child(point->a, new_node(line_num, *char_pos, char_pos));
       suffix_link(last_internal_node, point);
     } else {
+      if (!point->b) set_active_edge(point, new_char, text);
       /* start from next node if active length is greater than edge length */
       if (skip_count(point, new_char, text)) continue;
       /* rule 3 - char exists on edge*/

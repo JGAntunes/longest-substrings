@@ -1,16 +1,16 @@
-SRCS=test_suffix.c
+SRCS=test_suffix_tree.c
 OBJS=${SRCS:.c=}
 
 INCLUDES =  -I ../include
 CC = gcc
-LIBTREAP =  ../lib/libsuffixtree.a
+LIBSUFFIXTREE =  ../lib/libsuffixtree.a
 CFLAGS = -g -ansi -Wall $(INCLUDES)
 
 COMPILE = $(CC) $(DEFS) $(INCLUDES) $(CFLAGS)
 
 all: $(OBJS)
 
-test_treap: test_treap.c $(LIBTREAP)
+test_suffix_tree: test_suffix_tree.c $(LIBSUFFIXTREE)
 
 
 clean:
