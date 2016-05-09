@@ -1,7 +1,7 @@
 OBJECTS= suffix_tree.o
 
 DEFAULT_INCLUDES = -I.
-INCLUDES = -I ../include
+INCLUDES = -I ../include ./
 DEFS ?= -DHAVE_CONFIG_H #-DDEBUG
 # -DC_DEBUG
 CC = gcc
