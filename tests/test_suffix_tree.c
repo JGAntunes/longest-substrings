@@ -3,12 +3,12 @@
 #include <stdlib.h>
 #include "suffix_tree.h"
 #define LINE_BUFFER 256
-
+/*
 void print_node_label (Node_T* node, char** text) {
   int start = node->path_start;
   int end = *(node->path_end);
   int i;
-  printf("BEGIN: %d END: %d", start, end);
+  printf("BEGIN: %d END: %d ", start, end);
   for (i = start; i <= end; i++) {
     printf("%c", text[node->line_num][i]);
   }
@@ -27,13 +27,14 @@ void print_tree (Node_T* node, char** text, int level) {
     print_node_label(node, text);
   }
   printf(")\n");
-  if (node->brother) {
-    print_tree(node->brother, text, level);
-  }
   if (node->child) {
     print_tree(node->child, text, level+1);
   }
+  if (node->brother) {
+    print_tree(node->brother, text, level);
+  }
 }
+*/
 int main (int argc, const  char* argv[] ) {
   if (argc < 3) {
     printf("Correct usage ./<test_suffix_tree_exe> <in_file> <out_file>\n");

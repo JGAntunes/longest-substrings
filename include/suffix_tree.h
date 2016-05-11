@@ -19,11 +19,14 @@ typedef struct Point_T {
   Node_T* b;
   /* maintain a pointer to the root node as an aux for operations */
   Node_T* root;
+  int* char_pos;
   int string_len;
 } Point_T;
 
 typedef enum { false = 0, true = !false } bool;
 
 Node_T** build_suffix_tree(char** text, int lines, int* length);
+
+void print_tree (Node_T* node, char** text, int level);
 
 #endif

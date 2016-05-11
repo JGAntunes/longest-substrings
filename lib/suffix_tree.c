@@ -1,8 +1,41 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include <stdio.h>
 #include "suffix_tree.h"
 #include "suffix_tree_p.h"
+
+
+void print_node_label (Node_T* node, char** text) {
+  int start = node->path_start;
+  int end = *(node->path_end);
+  int i;
+  printf("BEGIN: %d END: %d ", start, end);
+  for (i = start; i <= end; i++) {
+    printf("%c", text[node->line_num][i]);
+  }
+}
+
+
+void print_tree (Node_T* node, char** text, int level) {
+  int i;
+  for (i = 0; i < level; i++) {
+    printf("\t");
+  }
+  printf("<- (%d ", node->line_num);
+  if (!node->hook) {
+    printf("ROOT");
+  } else {
+    print_node_label(node, text);
+  }
+  printf(")\n");
+  if (node->child) {
+    print_tree(node->child, text, level+1);
+  }
+  if (node->brother) {
+    print_tree(node->brother, text, level);
+  }
+}
 
 Node_T** build_suffix_tree(char** text, int lines, int* length) {
   int i = 0;
@@ -13,11 +46,22 @@ Node_T** build_suffix_tree(char** text, int lines, int* length) {
   for (i = 0; i < lines; i++) {
     text[i][length[i]] = '\1'; /* force diferent terminators*/
     for (j = 0; j <= length[i]; j++) {
-      insert_char(point, i, &(j), text);
+      insert_char(point, i, j, text);
+      printf("\n PHASE %d %d\n", i, j);
+      print_tree(*suffix_tree, text, 0);
     }
     text[i][length[i]] = '\0'; /* re-establish terminator*/
+    reset_point(point);
   }
+  free(point);
   return suffix_tree;
+}
+
+void reset_point(Point_T* point) {
+  point->a = point->root;
+  point->b = NULL;
+  point->string_len = 0;
+  point->char_pos = (int*) malloc (sizeof(int));
 }
 
 void init_suffix_tree(Node_T** root, Point_T** point) {
@@ -27,10 +71,8 @@ void init_suffix_tree(Node_T** root, Point_T** point) {
   (*root) = new_node(0, 0, NULL);
   (*root)->suffix_link = (*root);
   /* init point */
-  (*point)->a = *root;
   (*point)->root = *root;
-  (*point)->b = NULL;
-  (*point)->string_len = 0;
+  reset_point(*point);
   return;
 }
 
@@ -74,6 +116,7 @@ void set_child(Node_T* parent_node, Node_T* new_node) {
 
 void set_internal_node(Point_T* point, Node_T* internal_node, Node_T* leaf_node) {
   /* maintain link between brothers if any */
+  if (point->b->brother) point->b->brother->hook = point->b->hook;
   *(point->b->hook) = point->b->brother;
   point->b->brother = NULL;
   /* update start path for existing node*/
@@ -83,6 +126,8 @@ void set_internal_node(Point_T* point, Node_T* internal_node, Node_T* leaf_node)
   /* add new internal node childs */
   set_child(internal_node, point->b);
   set_child(internal_node, leaf_node);
+  /* set correct active edge */
+  point->b = internal_node;
 }
 
 void set_active_edge(Point_T* point, char new_char, char** text) {
@@ -108,13 +153,14 @@ void set_point(Point_T* point, char next_char, char** text) {
   }
   /* always follow suffix link, root defaults to itself*/
   point->a = point->a->suffix_link;
+  if (point->b) set_active_edge(point, text[point->b->line_num][point->b->path_start], text);
 }
 
-void suffix_link(Node_T* node_to_link, Point_T* point) {
+void suffix_link(Node_T** node_to_link, Node_T* dest_node) {
   /* there's a node waiting for a suffix link and active node isn't root */
-  if (node_to_link && point->a->hook) {
-    node_to_link->suffix_link = point->a;
-    node_to_link = NULL;
+  if (*node_to_link && dest_node->hook) {
+    (*node_to_link)->suffix_link = dest_node;
+    *node_to_link = NULL;
   }
 }
 
@@ -127,53 +173,57 @@ bool skip_count(Point_T* point, char new_char, char** text) {
   if (point->string_len >= length) {
     point->string_len -= length;
     point->a = point->b;
+    point->b = NULL;
     /* need to set active edge*/
     if (point->string_len > 0) {
-      set_active_edge(point, new_char, text);
+      set_active_edge(point, text[point->a->line_num][point->a->path_start + length + 1], text);
     }
     return true;
   }
   return false;
 }
 
-void insert_char(Point_T* point, int line_num, int* char_pos, char** text) {
+void insert_char(Point_T* point, int line_num, int char_pos, char** text) {
   /* remaining suffixes waiting insertion */
   static int remain = 0;
+  *(point->char_pos) = char_pos;
   remain++;
 
   /* new char to insert */
-  char new_char = text[line_num][*char_pos];
+  char next_char = text[line_num][*(point->char_pos)];
   Node_T* internal_node = NULL;
   /* internal node waiting for suffix link */
   Node_T* last_internal_node = NULL;
   /* insert all suffixes */
   while (remain > 0) {
 
+    /* find edge with next char */
+    if (!point->string_len) set_active_edge(point, next_char, text);
+
     /* rule 2 - no edge with next char*/
-    if (!char_in_edge_start(point, new_char, text)) {
-      set_child(point->a, new_node(line_num, *char_pos, char_pos));
-      suffix_link(last_internal_node, point);
+    if (!char_in_edge_start(point, text)) {
+      set_child(point->a, new_node(line_num, *(point->char_pos), point->char_pos));
+      suffix_link(&last_internal_node, point->a);
     } else {
-      if (!point->b) set_active_edge(point, new_char, text);
       /* start from next node if active length is greater than edge length */
-      if (skip_count(point, new_char, text)) continue;
+      if (skip_count(point, next_char, text)) continue;
       /* rule 3 - char exists on edge*/
-      if (char_in_edge_next(point, new_char, text)) {
-        suffix_link(last_internal_node, point);
+      if (char_in_edge_next(point, next_char, text)) {
+        suffix_link(&last_internal_node, point->a);
         point->string_len++;
         return;
       }
       /* rule 2 - edge split, new internal node and leaf node */
       internal_node = new_internal_node(line_num, point);
-      set_internal_node(point, internal_node, new_node(line_num, *char_pos, char_pos));
-      suffix_link(last_internal_node, point);
+      set_internal_node(point, internal_node, new_node(line_num, *(point->char_pos), point->char_pos));
+      suffix_link(&last_internal_node, internal_node);
       /* newly created internal node waiting for it's suffix link */
       last_internal_node = internal_node;
     }
     /* decrement suffix remain counter */
     remain--;
     /* correctly set the active point for next insertion */
-    set_point(point, text[line_num][*char_pos - remain + 1], text);
+    set_point(point, text[line_num][*(point->char_pos) - remain + 1], text);
   }
 }
 
@@ -186,8 +236,10 @@ bool char_in_edge_next(Point_T* point, char new_char, char** text) {
 }
 
 /* given a point and a char check if there's an edge starting with it */
-bool char_in_edge_start(Point_T* point, char new_char, char** text) {
+bool char_in_edge_start(Point_T* point, char** text) {
+  if (!point->b) return false;
   Node_T* current_node = point->a->child;
+  char new_char  = text[point->b->line_num][point->b->path_start];
   while (current_node) {
     int line = current_node->line_num;
     int pos = current_node->path_start;
