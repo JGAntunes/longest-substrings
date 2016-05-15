@@ -21,7 +21,10 @@ typedef struct Node_T {
 /* Position between to letters of a given branch */
 typedef struct Point_T {
   Node_T* a;
+  /* node be acts has the next node, active edge is the next char in the string*/
   Node_T* b;
+  int active_edge;
+  int line_num;
   /* maintain a pointer to the root node as an aux for operations */
   Node_T* root;
   int* char_pos;
@@ -30,7 +33,7 @@ typedef struct Point_T {
 
 Node_T** build_suffix_tree(char** text, int lines, int* length);
 
-void print_tree (Node_T* node, char** text, int level);
+void print_tree (Node_T* node, char** text, int num_lines, int level);
 
 int* longest_substring(Node_T** suffix_tree, int num_lines);
 

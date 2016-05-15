@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "suffix_tree.h"
-#define LINE_BUFFER 1024
+#define LINE_BUFFER 5120
 
 int main (int argc, const  char* argv[] ) {
 
@@ -36,13 +36,14 @@ int main (int argc, const  char* argv[] ) {
     text[i][lines_length[i]] = '\0';
   }
   suffix_tree = build_suffix_tree(text, num_lines, lines_length);
-  print_tree(*suffix_tree, text, 0);
   max_common_substrings = longest_substring(suffix_tree, num_lines);
-  /* output to file */
-  for (i= 0; i < num_lines - 1; i++) {
-    printf("%d", max_common_substrings[i + 1]);
-    if (i < num_lines - 2) printf(" ");
+  /* print_tree(*suffix_tree, text, num_lines, 0); */
+  /* output to stdout */
+  for (i= 1; i < num_lines; i++) {
+    printf("%d ", max_common_substrings[i]);
   }
+  printf("\n");
+  fflush(stdout);
 
   /* free memory */
   free(max_common_substrings);
