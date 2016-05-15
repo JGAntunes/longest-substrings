@@ -17,7 +17,7 @@ int main (int argc, const  char* argv[] ) {
   char line[LINE_BUFFER];
   read_result = fgets(line, sizeof(line), stdin);
   if (!read_result) {
-    printf("Reached end of file, buffer insufficient!");
+    printf("Buffer insufficient!");
   }
 
   num_lines = atoi(line);
@@ -26,7 +26,7 @@ int main (int argc, const  char* argv[] ) {
   for (i = 0; i < num_lines; i++) {
     read_result = fgets(line, sizeof(line), stdin);
     if (!read_result) {
-      printf("Reached end of file, buffer insufficient!");
+      printf("Buffer insufficient!");
     }
     sscanf(line, "%d", &(lines_length[i]));
     /* don't forget terminator */
